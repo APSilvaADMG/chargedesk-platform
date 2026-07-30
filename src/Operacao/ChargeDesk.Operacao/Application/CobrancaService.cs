@@ -1,6 +1,6 @@
 // Autor: Anderson Pereira Silva
-// Data: 29/07/2026
-// Descrição: Cobrança — 1ª faixa fixa + excedente proporcional (paridade ChargeDesk).
+// Data: 30/07/2026
+// Descrição: Cobrança por tempo — carregamento e estacionamento (faixas).
 
 namespace ChargeDesk.Operacao.Application;
 
@@ -16,6 +16,7 @@ public readonly record struct DetalheCobranca(
 public static class CobrancaService
 {
     public static readonly TarifaConfig Padrao = new(20m, 50m, 60);
+    public static readonly TarifaConfig EstacionamentoPadrao = new(10m, 5m, 60);
 
     public static int CalcularMinutos(DateTime inicio, DateTime fim)
     {

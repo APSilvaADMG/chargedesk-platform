@@ -1,6 +1,6 @@
 // Autor: Anderson Pereira Silva
-// Data: 29/07/2026
-// Descrição: Testes de regras Fase 1 (carregamento / caixa / cobrança).
+// Data: 30/07/2026
+// Descrição: Testes de regras Fase 1/2 (carregamento, estacionamento, ticket, caixa).
 
 using ChargeDesk.Operacao.Application;
 using ChargeDesk.Operacao.Domain;
@@ -52,7 +52,30 @@ public class AtendimentoRegrasTests
     public void FecharCaixa_BloqueiaComAtendimentoAtivo()
     {
         Assert.Null(AtendimentoValidacaoService.ValidarFechamentoSemAtendimentosAtivos(0));
-        Assert.Contains("1 carregamento", AtendimentoValidacaoService.ValidarFechamentoSemAtendimentosAtivos(1));
+        Assert.Contains("1 atendimento", AtendimentoValidacaoService.ValidarFechamentoSemAtendimentosAtivos(1));
+    }
+
+    [Fact]
+    public void VagaOcupada_BloqueiaEntrada()
+    {
+        var erro = AtendimentoValidacaoService.ValidarVaga(ativo: true, ocupado: true);
+        Assert.Equal(AtendimentoValidacaoService.MensagemVagaIndisponivel, erro);
+    }
+
+    [Fact]
+    public void Cobranca_Estacionamento_PrimeiraFaixa()
+    {
+        Assert.Equal(10m, CobrancaService.CalcularValor(45, CobrancaService.EstacionamentoPadrao));
+        Assert.True(CobrancaService.CalcularValor(90, CobrancaService.EstacionamentoPadrao) > 10m);
+    }
+
+    [Fact]
+    public void TicketHtml_ContemNumeroEPlaca()
+    {
+        var html = TicketHtmlService.GerarInicio(12, "ChargeDesk — Teste", "Cliente X", "ABC1D23", "Vaga 01", DateTime.Today.AddHours(10));
+        Assert.Contains("#000012", html);
+        Assert.Contains("ABC1D23", html);
+        Assert.Contains("window.print()", html);
     }
 
     [Fact]

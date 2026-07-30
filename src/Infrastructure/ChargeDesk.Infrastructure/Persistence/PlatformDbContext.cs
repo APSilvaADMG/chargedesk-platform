@@ -25,6 +25,7 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options) : Db
 
     public DbSet<Atendimento> Atendimentos => Set<Atendimento>();
     public DbSet<AtendimentoCarregamento> AtendimentosCarregamento => Set<AtendimentoCarregamento>();
+    public DbSet<AtendimentoEstacionamento> AtendimentosEstacionamento => Set<AtendimentoEstacionamento>();
 
     public DbSet<Caixa> Caixas => Set<Caixa>();
     public DbSet<Recebimento> Recebimentos => Set<Recebimento>();
@@ -39,6 +40,7 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options) : Db
         modelBuilder.Entity<Atendimento>().HasIndex(x => new { x.EmpresaId, x.Ticket });
         modelBuilder.Entity<Atendimento>().HasIndex(x => new { x.EmpresaId, x.StatusAtendimento });
         modelBuilder.Entity<AtendimentoCarregamento>().HasKey(x => x.AtendimentoId);
+        modelBuilder.Entity<AtendimentoEstacionamento>().HasKey(x => x.AtendimentoId);
         modelBuilder.Entity<Caixa>().HasIndex(x => new { x.EmpresaId, x.UnidadeId, x.StatusCaixa });
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())

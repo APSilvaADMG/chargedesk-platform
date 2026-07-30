@@ -32,16 +32,16 @@ Checklist de paridade Fase 1:
 
 | # | Regra | Origem | Status Platform |
 |---|-------|--------|-----------------|
-| 1 | Nova carga exige caixa aberto | SessaoValidacao / API | Pendente |
-| 2 | Ponto/equipamento ocupado = indisponível | `/pontos/disponiveis` + POST | Pendente |
-| 3 | Lista vazia de disponíveis ≠ fallback para todos | app.js regressão | Pendente |
-| 4 | Cliente da sessão = dono do veículo | `ResolverClienteIdDaSessao` | Pendente |
-| 5 | Telefone obrigatório no cliente | Cadastro cliente | Pendente |
-| 6 | Fechar caixa bloqueado com atendimento EmExecucao | Validação caixa | Pendente |
-| 7 | Horário operacional Brasília | `HorarioOperacional` | Pendente |
-| 8 | Volume persistente Azure `/data` | deploy + Azure Files | Pendente |
-| 9 | Ticket único | TicketNumeracao | Pendente |
-| 10 | Valor/tempo ao vivo em andamento | CobrancaService + DTO | Pendente |
+| 1 | Nova carga exige caixa aberto | SessaoValidacao / API | OK |
+| 2 | Ponto/equipamento ocupado = indisponível | `/pontos/disponiveis` + POST | OK |
+| 3 | Lista vazia de disponíveis ≠ fallback para todos | app.js regressão | OK |
+| 4 | Cliente da sessão = dono do veículo | `ResolverClienteIdDaSessao` | OK |
+| 5 | Telefone obrigatório no cliente | Cadastro cliente | OK |
+| 6 | Fechar caixa bloqueado com atendimento EmExecucao | Validação caixa | OK |
+| 7 | Horário operacional Brasília | `HorarioOperacional` | OK |
+| 8 | Volume persistente Azure `/data` | deploy + Azure Files | Pendente (reauth) |
+| 9 | Ticket único | TicketNumeracao | OK |
+| 10 | Valor/tempo ao vivo em andamento | CobrancaService + DTO | OK |
 
 ---
 

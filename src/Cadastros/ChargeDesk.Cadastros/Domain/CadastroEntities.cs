@@ -46,5 +46,6 @@ public enum EquipamentoTipo : short
     Ocr = 7,
     Rfid = 8,
     Display = 9,
+    Vaga = 10,
     Outro = 99
 }

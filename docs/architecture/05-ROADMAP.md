@@ -30,16 +30,16 @@ Arquitetura: **modular monolith** (.NET) + SPA. Microserviços só se métrica/n
 
 Objetivo: substituir o ChargeDesk operacional pelo Platform **sem perda** das regras críticas.
 
-1. Core (Empresa, Unidade, Usuário, Auth, Permissão básica, Licença)  
-2. Cadastros (Cliente, Veículo, Equipamento/Carregador)  
-3. Atendimento + especialização Carregamento  
-4. Disponibilidade de equipamento (ex-ponto)  
-5. Cliente herdado do veículo  
-6. Caixa (abrir/fechar, bloqueio com atendimento ativo)  
-7. Ticket / impressão  
-8. Horário América/São_Paulo  
-9. Persistência durable (Azure Files / volume)  
-10. Painel operacional mínimo  
+1. [x] Core (Empresa, Unidade, Usuário, Auth, Permissão básica, Licença)  
+2. [x] Cadastros (Cliente, Veículo, Equipamento/Carregador)  
+3. [x] Atendimento + especialização Carregamento  
+4. [x] Disponibilidade de equipamento (ex-ponto)  
+5. [x] Cliente herdado do veículo  
+6. [x] Caixa (abrir/fechar, bloqueio com atendimento ativo)  
+7. [x] Ticket / impressão (HTML navegador)  
+8. [x] Horário América/São_Paulo  
+9. [ ] Persistência durable (Azure Files / volume) — aguarda reauth Azure  
+10. [x] Painel operacional mínimo (refresh ao vivo + histórico caixa)  
 
 **Critério de saída:** checklist de paridade 07-MAPA-MIGRACAO 100% verde + testes automatizados das regras críticas.
 
@@ -47,10 +47,10 @@ Objetivo: substituir o ChargeDesk operacional pelo Platform **sem perda** das re
 
 ## Fase 2 — Estacionamento (prova do modelo)
 
-- Tipo Atendimento = Estacionamento  
-- Extensão vaga / entrada / saída / permanência  
-- Tabela de preço por tempo  
-- Mapa de ocupação  
+- [x] Tipo Atendimento = Estacionamento  
+- [x] Extensão vaga / entrada / saída / permanência  
+- [x] Tabela de preço por tempo (`CobrancaService.EstacionamentoPadrao`)  
+- [x] Mapa de ocupação (SPA)  
 
 **Critério de saída:** mesmos Core/Cadastros/Financeiro sem duplicar Cliente/Veículo.
 

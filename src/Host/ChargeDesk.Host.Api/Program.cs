@@ -1,6 +1,6 @@
 // Autor: Anderson Pereira Silva
-// Data: 29/07/2026
-// Descrição: Host API unificado da ChargeDesk Platform (modular monolith).
+// Data: 30/07/2026
+// Descrição: Host API unificado da ChargeDesk Platform (SPA + seed).
 
 using ChargeDesk.BuildingBlocks.Time;
 using ChargeDesk.Host.Api;
@@ -38,7 +38,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
 app.UseCors();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.MapPlatformApi();
+app.MapFallbackToFile("index.html");
 
 app.Run();
 

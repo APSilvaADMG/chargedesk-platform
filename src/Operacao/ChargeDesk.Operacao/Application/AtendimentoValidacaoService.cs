@@ -1,6 +1,6 @@
 // Autor: Anderson Pereira Silva
-// Data: 29/07/2026
-// Descrição: Validações de atendimento de carregamento (paridade ChargeDesk).
+// Data: 30/07/2026
+// Descrição: Validações de atendimento (carregamento e estacionamento).
 
 using ChargeDesk.Operacao.Domain;
 
@@ -10,6 +10,9 @@ public static class AtendimentoValidacaoService
 {
     public const string MensagemEquipamentoIndisponivel =
         "Este ponto de carregamento não está mais disponível. Selecione outro ponto.";
+
+    public const string MensagemVagaIndisponivel =
+        "Esta vaga não está mais disponível. Selecione outra vaga.";
 
     public static string? ValidarTicket(int ticket, bool duplicado)
     {
@@ -25,10 +28,17 @@ public static class AtendimentoValidacaoService
         return null;
     }
 
+    public static string? ValidarVaga(bool ativo, bool ocupado)
+    {
+        if (!ativo) return "Vaga não encontrada ou inativa.";
+        if (ocupado) return MensagemVagaIndisponivel;
+        return null;
+    }
+
     public static string? ValidarCaixaAbertoParaIniciar(bool caixaAberto)
     {
         if (!caixaAberto)
-            return "Abra o caixa antes de iniciar um novo carregamento.";
+            return "Abra o caixa antes de iniciar um novo atendimento.";
         return null;
     }
 
@@ -36,8 +46,8 @@ public static class AtendimentoValidacaoService
     {
         if (emExecucao <= 0) return null;
         if (emExecucao == 1)
-            return "Não é possível fechar o caixa com 1 carregamento em andamento. Finalize ou cancele a sessão ativa.";
-        return $"Não é possível fechar o caixa com {emExecucao} carregamentos em andamento. Finalize ou cancele as sessões ativas.";
+            return "Não é possível fechar o caixa com 1 atendimento em andamento. Finalize ou cancele o atendimento ativo.";
+        return $"Não é possível fechar o caixa com {emExecucao} atendimentos em andamento. Finalize ou cancele os atendimentos ativos.";
     }
 
     public static string? ValidarHorarios(DateTime inicio, DateTime? fim)
