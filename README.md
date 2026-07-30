@@ -54,9 +54,21 @@ Carregamento, estacionamento, lavagem, oficina e valet são especializações �
 
 | Fase | Estado |
 |------|--------|
-| 0 — Constituição + Domain Model | Em andamento |
+| 0 — Constituição + Domain Model | Concluída |
 | 1 — Core + Cadastros + Atendimento + Carregamento | Planejada |
 | 2+ | Ver [Roadmap](docs/architecture/05-ROADMAP.md) |
+
+## Deploy Azure
+
+```powershell
+.\scripts\deploy-azure.ps1 -CriarRecursos
+.\scripts\configurar-persistencia-azure.ps1
+```
+
+- Resource Group: `rg-chargedesk` (compartilhado)
+- Container App: `chargedesk-platform` (**separado** do app `chargedesk` em produção)
+- Imagem ACR: `chargedesk-platform`
+- Persistência: share `cdplatform-data` em `/data`
 
 ## Autoria
 

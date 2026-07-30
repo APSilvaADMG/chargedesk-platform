@@ -1,0 +1,20 @@
+# Autor: Anderson Pereira Silva
+# Data: 29/07/2026
+# Descrição: Exclusões do contexto Docker.
+
+**/.git
+**/.vs
+**/.idea
+**/bin
+**/obj
+**/_test_out*
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.user
+**/*.suo
+**/Thumbs.db
+docs/
+README.md
+tests/
+src/Web/
