@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\ChargeDesk.Core\ChargeDesk.Core.csproj" />
+    <ProjectReference Include="..\..\Cadastros\ChargeDesk.Cadastros\ChargeDesk.Cadastros.csproj" />
+    <ProjectReference Include="..\..\Operacao\ChargeDesk.Operacao\ChargeDesk.Operacao.csproj" />
+    <ProjectReference Include="..\..\Financeiro\ChargeDesk.Financeiro\ChargeDesk.Financeiro.csproj" />
+  </ItemGroup>
+
+</Project>

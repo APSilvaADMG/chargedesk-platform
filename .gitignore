@@ -1,0 +1,19 @@
+# ChargeDesk Platform — .gitignore
+
+bin/
+obj/
+.vs/
+*.user
+*.suo
+.idea/
+node_modules/
+dist/
+wwwroot/downloads/*.zip
+*.db
+*.db-shm
+*.db-wal
+_test_out*/
+.env
+appsettings.*.local.json
+TestResults/
+*.log

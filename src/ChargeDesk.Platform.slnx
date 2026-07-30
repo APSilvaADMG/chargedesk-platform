@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/BuildingBlocks/">
+    <Project Path="BuildingBlocks/ChargeDesk.BuildingBlocks/ChargeDesk.BuildingBlocks.csproj" />
+  </Folder>
+  <Folder Name="/Cadastros/">
+    <Project Path="Cadastros/ChargeDesk.Cadastros/ChargeDesk.Cadastros.csproj" />
+  </Folder>
+  <Folder Name="/Core/">
+    <Project Path="Core/ChargeDesk.Core/ChargeDesk.Core.csproj" />
+  </Folder>
+  <Folder Name="/Financeiro/">
+    <Project Path="Financeiro/ChargeDesk.Financeiro/ChargeDesk.Financeiro.csproj" />
+  </Folder>
+  <Folder Name="/Host/">
+    <Project Path="Host/ChargeDesk.Host.Api/ChargeDesk.Host.Api.csproj" />
+  </Folder>
+  <Folder Name="/Operacao/">
+    <Project Path="Operacao/ChargeDesk.Operacao/ChargeDesk.Operacao.csproj" />
+  </Folder>
+  <Project Path="../tests/ChargeDesk.Platform.UnitTests/ChargeDesk.Platform.UnitTests.csproj" />
+</Solution>
