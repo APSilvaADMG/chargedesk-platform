@@ -55,7 +55,7 @@ Carregamento, estacionamento, lavagem, oficina e valet são especializações �
 | Fase | Estado |
 |------|--------|
 | 0 — Constituição + Domain Model | Concluída |
-| 1 — Core + Cadastros + Atendimento + Carregamento | Planejada |
+| 1 — Core + Cadastros + Atendimento + Carregamento (API MVP) | Em andamento |
 | 2+ | Ver [Roadmap](docs/architecture/05-ROADMAP.md) |
 
 ## Deploy Azure

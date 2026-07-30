@@ -14,6 +14,9 @@
   <Folder Name="/Host/">
     <Project Path="Host/ChargeDesk.Host.Api/ChargeDesk.Host.Api.csproj" />
   </Folder>
+  <Folder Name="/Infrastructure/">
+    <Project Path="Infrastructure/ChargeDesk.Infrastructure/ChargeDesk.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/Operacao/">
     <Project Path="Operacao/ChargeDesk.Operacao/ChargeDesk.Operacao.csproj" />
   </Folder>

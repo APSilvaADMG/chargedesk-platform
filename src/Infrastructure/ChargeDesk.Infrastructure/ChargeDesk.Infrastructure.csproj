@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\ChargeDesk.BuildingBlocks\ChargeDesk.BuildingBlocks.csproj" />
+    <ProjectReference Include="..\..\Core\ChargeDesk.Core\ChargeDesk.Core.csproj" />
+    <ProjectReference Include="..\..\Cadastros\ChargeDesk.Cadastros\ChargeDesk.Cadastros.csproj" />
+    <ProjectReference Include="..\..\Operacao\ChargeDesk.Operacao\ChargeDesk.Operacao.csproj" />
+    <ProjectReference Include="..\..\Financeiro\ChargeDesk.Financeiro\ChargeDesk.Financeiro.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

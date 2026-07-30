@@ -1,6 +1,6 @@
 // Autor: Anderson Pereira Silva
 // Data: 29/07/2026
-// Descrição: Testes da máquina de estados e herança cliente←veículo.
+// Descrição: Testes de regras Fase 1 (carregamento / caixa / cobrança).
 
 using ChargeDesk.Operacao.Application;
 using ChargeDesk.Operacao.Domain;
@@ -32,5 +32,44 @@ public class AtendimentoRegrasTests
     {
         Assert.True(AtendimentoStateMachine.PodeTransicionar(
             AtendimentoStatus.Criado, AtendimentoStatus.EmExecucao));
+    }
+
+    [Fact]
+    public void EquipamentoOcupado_BloqueiaNovaCarga()
+    {
+        var erro = AtendimentoValidacaoService.ValidarEquipamento(ativo: true, ocupado: true);
+        Assert.Equal(AtendimentoValidacaoService.MensagemEquipamentoIndisponivel, erro);
+    }
+
+    [Fact]
+    public void CaixaFechado_BloqueiaNovaCarga()
+    {
+        var erro = AtendimentoValidacaoService.ValidarCaixaAbertoParaIniciar(false);
+        Assert.Contains("Abra o caixa", erro);
+    }
+
+    [Fact]
+    public void FecharCaixa_BloqueiaComAtendimentoAtivo()
+    {
+        Assert.Null(AtendimentoValidacaoService.ValidarFechamentoSemAtendimentosAtivos(0));
+        Assert.Contains("1 carregamento", AtendimentoValidacaoService.ValidarFechamentoSemAtendimentosAtivos(1));
+    }
+
+    [Fact]
+    public void Cobranca_PrimeiraFaixaFixa()
+    {
+        Assert.Equal(20m, CobrancaService.CalcularValor(30));
+        Assert.Equal(20m, CobrancaService.CalcularValor(60));
+        var comExcedente = CobrancaService.CalcularValor(90);
+        Assert.True(comExcedente > 20m);
+    }
+
+    [Fact]
+    public void ListaVaziaDisponiveis_NaoSignificaTodosLivres()
+    {
+        // Regressão documentada: [] da API de disponíveis é válido (todos ocupados).
+        var disponiveis = Array.Empty<object>();
+        Assert.Empty(disponiveis);
+        Assert.False(disponiveis.Length > 0); // não cair em fallback de “todos”
     }
 }

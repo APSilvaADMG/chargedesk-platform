@@ -11,6 +11,7 @@ COPY src/Core/ChargeDesk.Core/ChargeDesk.Core.csproj src/Core/ChargeDesk.Core/
 COPY src/Cadastros/ChargeDesk.Cadastros/ChargeDesk.Cadastros.csproj src/Cadastros/ChargeDesk.Cadastros/
 COPY src/Operacao/ChargeDesk.Operacao/ChargeDesk.Operacao.csproj src/Operacao/ChargeDesk.Operacao/
 COPY src/Financeiro/ChargeDesk.Financeiro/ChargeDesk.Financeiro.csproj src/Financeiro/ChargeDesk.Financeiro/
+COPY src/Infrastructure/ChargeDesk.Infrastructure/ChargeDesk.Infrastructure.csproj src/Infrastructure/ChargeDesk.Infrastructure/
 COPY src/Host/ChargeDesk.Host.Api/ChargeDesk.Host.Api.csproj src/Host/ChargeDesk.Host.Api/
 
 RUN dotnet restore src/Host/ChargeDesk.Host.Api/ChargeDesk.Host.Api.csproj
