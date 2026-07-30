@@ -1,5 +1,5 @@
 // Autor: Anderson Pereira Silva
-// Data: 29/07/2026
+// Data: 30/07/2026
 // Descrição: DbContext unificado da Platform (modular monolith).
 
 using ChargeDesk.BuildingBlocks.Domain;
@@ -26,9 +26,13 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options) : Db
     public DbSet<Atendimento> Atendimentos => Set<Atendimento>();
     public DbSet<AtendimentoCarregamento> AtendimentosCarregamento => Set<AtendimentoCarregamento>();
     public DbSet<AtendimentoEstacionamento> AtendimentosEstacionamento => Set<AtendimentoEstacionamento>();
+    public DbSet<AgendaReserva> AgendaReservas => Set<AgendaReserva>();
+    public DbSet<OrdemServico> OrdensServico => Set<OrdemServico>();
+    public DbSet<OrdemServicoItem> OrdemServicoItens => Set<OrdemServicoItem>();
 
     public DbSet<Caixa> Caixas => Set<Caixa>();
     public DbSet<Recebimento> Recebimentos => Set<Recebimento>();
+    public DbSet<LegacyIdMap> LegacyIdMaps => Set<LegacyIdMap>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +46,11 @@ public class PlatformDbContext(DbContextOptions<PlatformDbContext> options) : Db
         modelBuilder.Entity<AtendimentoCarregamento>().HasKey(x => x.AtendimentoId);
         modelBuilder.Entity<AtendimentoEstacionamento>().HasKey(x => x.AtendimentoId);
         modelBuilder.Entity<Caixa>().HasIndex(x => new { x.EmpresaId, x.UnidadeId, x.StatusCaixa });
+        modelBuilder.Entity<AgendaReserva>().HasIndex(x => new { x.EmpresaId, x.InicioPrevisto });
+        modelBuilder.Entity<OrdemServico>().HasIndex(x => new { x.EmpresaId, x.Numero }).IsUnique();
+        modelBuilder.Entity<OrdemServicoItem>().HasKey(x => x.Id);
+        modelBuilder.Entity<OrdemServicoItem>().HasIndex(x => x.OrdemServicoId);
+        modelBuilder.Entity<LegacyIdMap>().HasIndex(x => new { x.Tabela, x.LegacyId }).IsUnique();
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {

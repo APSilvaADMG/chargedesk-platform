@@ -55,8 +55,28 @@ Carregamento, estacionamento, lavagem, oficina e valet são especializações �
 | Fase | Estado |
 |------|--------|
 | 0 — Constituição + Domain Model | Concluída |
-| 1 — Core + Cadastros + Atendimento + Carregamento (API MVP) | Em andamento |
-| 2+ | Ver [Roadmap](docs/architecture/05-ROADMAP.md) |
+| 1 — Paridade Carregamento + SPA | Concluída (Azure volume pendente reauth) |
+| 1.1 — Importação SQLite legado | Disponível (`scripts/importar-chargedesk.ps1`) |
+| Endurecimento — JWT + testes integração + `.sln` | Concluído |
+| 2 — Estacionamento | Concluída |
+| 3 — Agenda + OS (MVP) | Concluída (fotos pendentes) |
+| 4+ | Ver [Roadmap](docs/architecture/05-ROADMAP.md) |
+
+## Execução local
+
+```powershell
+dotnet run --project src\Host\ChargeDesk.Host.Api\ChargeDesk.Host.Api.csproj
+# http://localhost:5038  ·  admin / admin123
+dotnet test ChargeDesk.Platform.sln
+```
+
+## Importação do ChargeDesk legado
+
+Com a API no ar:
+
+```powershell
+.\scripts\importar-chargedesk.ps1 -CaminhoDb C:\Projetos\carregamento-eletrico\carregamento.db
+```
 
 ## Deploy Azure
 

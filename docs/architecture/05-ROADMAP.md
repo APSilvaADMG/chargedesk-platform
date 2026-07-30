@@ -58,8 +58,18 @@ Objetivo: substituir o ChargeDesk operacional pelo Platform **sem perda** das re
 
 ## Fase 3 — Agenda + Ordens de Serviço
 
-- Agenda / reserva  
-- OS com checklist, itens, fotos  
+- [x] Agenda / reserva (`AgendaReserva` + check-in → Atendimento)  
+- [x] OS com checklist/itens (`OrdemServico` + `OrdemServicoItem`)  
+- [ ] Fotos anexas (próximo incremento)  
+
+---
+
+## Endurecimento / Fase 1.1
+
+- [x] Solution `.sln` no repositório  
+- [x] Auth JWT + policy Admin  
+- [x] Testes de integração API  
+- [x] Importação SQLite legado (`LegacySqliteImportService` + `scripts/importar-chargedesk.ps1`)  
 
 ---
 

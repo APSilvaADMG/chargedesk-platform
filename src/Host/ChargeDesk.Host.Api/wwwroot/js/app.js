@@ -5,11 +5,19 @@
 const Api = {
   async req(method, path, body) {
     const opt = { method, headers: { 'Content-Type': 'application/json' } };
+    const token = session?.token;
+    if (token) opt.headers['Authorization'] = 'Bearer ' + token;
     if (body !== undefined) opt.body = JSON.stringify(body);
     const res = await fetch('/api' + path, opt);
     const txt = await res.text();
     let data = null;
     try { data = txt ? JSON.parse(txt) : null; } catch { data = txt; }
+    if (res.status === 401) {
+      session = null;
+      localStorage.removeItem('cdp.session');
+      showLogin();
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
     if (!res.ok) throw new Error(typeof data === 'string' ? data : (data?.title || data?.detail || txt || res.statusText));
     return data;
   },
@@ -18,7 +26,7 @@ const Api = {
 };
 
 const statusLabel = (s) => ({ 1:'Criado',5:'Em execução',6:'Aguardando pag.',7:'Finalizado',8:'Cancelado' }[s] || s);
-const tipoLabel = (t) => ({ 1:'Carga', 2:'Estacion.' }[t] || t);
+const tipoLabel = (t) => ({ 1:'Carga', 2:'Estacion.', 3:'Lavagem', 4:'Oficina', 5:'Valet' }[t] || t);
 const moeda = (v) => (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const hora = (d) => d ? new Date(d).toLocaleString('pt-BR') : '—';
 const formaLabel = (f) => ({ 1:'PIX',2:'Dinheiro',3:'Débito',4:'Crédito',5:'Cortesia' }[f] || f);
@@ -54,6 +62,8 @@ async function navigate(page) {
     else if (page === 'caixa') await renderCaixa(el);
     else if (page === 'atendimentos') await renderAtendimentos(el);
     else if (page === 'estacionamento') await renderEstacionamento(el);
+    else if (page === 'agenda') await renderAgenda(el);
+    else if (page === 'os') await renderOs(el);
     else if (page === 'clientes') await renderClientes(el);
     else if (page === 'veiculos') await renderVeiculos(el);
   } catch (e) {
@@ -174,6 +184,106 @@ async function renderEstacionamento(el) {
     </div>`;
   document.getElementById('btnEnt').onclick = abrirEntradaPatio;
 }
+
+async function renderAgenda(el) {
+  const lista = await Api.get('/agenda');
+  el.innerHTML = `
+    <div class="d-flex justify-content-between mb-3">
+      <h2 class="h4 mb-0">Agenda</h2>
+      <button class="btn btn-primary" id="btnAg">+ Reserva</button>
+    </div>
+    <div class="table-card"><table class="table table-sm"><thead>
+      <tr><th>Quando</th><th>Cliente</th><th>Placa</th><th>Tipo</th><th>Status</th><th></th></tr></thead>
+      <tbody>${(lista||[]).map(a => `<tr>
+        <td>${hora(a.inicioPrevisto)}</td><td>${a.clienteNome}</td><td>${a.placa||'—'}</td>
+        <td>${tipoLabel(a.tipoServico)}</td><td>${a.statusAgenda}</td>
+        <td class="text-end">${a.statusAgenda < 3 ? `<button class="btn btn-sm btn-success" onclick="checkinAgenda('${a.id}')">Check-in</button>` : ''}</td>
+      </tr>`).join('') || '<tr><td colspan="6" class="text-muted">Nenhuma reserva</td></tr>'}</tbody></table></div>`;
+  document.getElementById('btnAg').onclick = async () => {
+    const [clientes, veiculos] = await Promise.all([Api.get('/clientes'), Api.get('/veiculos')]);
+    if (!clientes?.length) { alert('Cadastre um cliente.'); return; }
+    modalTitle.textContent = 'Nova reserva';
+    const agora = new Date(); agora.setMinutes(agora.getMinutes() - agora.getTimezoneOffset());
+    modalBody.innerHTML = `
+      <select class="form-select mb-2" id="aCli">${clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select>
+      <select class="form-select mb-2" id="aVeic"><option value="">— Veículo —</option>${(veiculos||[]).map(v=>`<option value="${v.id}">${v.placa}</option>`).join('')}</select>
+      <select class="form-select mb-2" id="aTipo"><option value="4">Oficina</option><option value="3">Lavagem</option><option value="1">Carga</option><option value="2">Estacion.</option></select>
+      <input type="datetime-local" class="form-control mb-2" id="aIni" value="${agora.toISOString().slice(0,16)}">
+      <input class="form-control" id="aObs" placeholder="Observações">`;
+    modalFooter.innerHTML = `<button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      <button class="btn btn-primary" id="btnSaveAg">Salvar</button>`;
+    btnSaveAg.onclick = async () => {
+      try {
+        await Api.post('/agenda', {
+          empresaId: session.empresaId, unidadeId: session.unidadeId,
+          clienteId: aCli.value, veiculoId: aVeic.value || null,
+          tipoServico: +aTipo.value, inicioPrevisto: new Date(aIni.value).toISOString(),
+          observacoes: aObs.value || null
+        });
+        modal.hide(); navigate('agenda');
+      } catch (e) { alert(e.message); }
+    };
+    modal.show();
+  };
+}
+
+window.checkinAgenda = async (id) => {
+  if (!confirm('Fazer check-in e abrir atendimento?')) return;
+  try {
+    await Api.post(`/agenda/${id}/checkin`, {});
+    navigate('agenda');
+  } catch (e) { alert(e.message); }
+};
+
+async function renderOs(el) {
+  const lista = await Api.get('/ordens-servico');
+  el.innerHTML = `
+    <div class="d-flex justify-content-between mb-3">
+      <h2 class="h4 mb-0">Ordens de Serviço</h2>
+      <button class="btn btn-primary" id="btnOs">+ OS</button>
+    </div>
+    <div class="table-card"><table class="table table-sm"><thead>
+      <tr><th>#</th><th>Cliente</th><th>Placa</th><th>Status</th><th>Abertura</th><th></th></tr></thead>
+      <tbody>${(lista||[]).map(o => `<tr>
+        <td>${o.numero}</td><td>${o.clienteNome}</td><td>${o.placa||'—'}</td>
+        <td>${o.statusOs}</td><td>${hora(o.abertaEm)}</td>
+        <td class="text-end">${o.statusOs < 5 ? `<button class="btn btn-sm btn-success" onclick="concluirOs('${o.id}')">Concluir</button>` : ''}</td>
+      </tr>`).join('') || '<tr><td colspan="6" class="text-muted">Nenhuma OS</td></tr>'}</tbody></table></div>`;
+  document.getElementById('btnOs').onclick = async () => {
+    const clientes = await Api.get('/clientes');
+    const veiculos = await Api.get('/veiculos');
+    if (!clientes?.length) { alert('Cadastre um cliente.'); return; }
+    modalTitle.textContent = 'Nova OS';
+    modalBody.innerHTML = `
+      <select class="form-select mb-2" id="oCli">${clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select>
+      <select class="form-select mb-2" id="oVeic"><option value="">— Veículo —</option>${(veiculos||[]).map(v=>`<option value="${v.id}">${v.placa}</option>`).join('')}</select>
+      <textarea class="form-control mb-2" id="oDiag" placeholder="Diagnóstico"></textarea>
+      <input class="form-control mb-2" id="oItem" placeholder="Item checklist / serviço">
+      <input type="number" step="0.01" class="form-control" id="oValor" placeholder="Valor unitário" value="0">`;
+    modalFooter.innerHTML = `<button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      <button class="btn btn-primary" id="btnSaveOs">Abrir OS</button>`;
+    btnSaveOs.onclick = async () => {
+      try {
+        const itens = oItem.value ? [{ descricao: oItem.value, tipo: 3, quantidade: 1, valorUnitario: +oValor.value || 0 }] : [];
+        await Api.post('/ordens-servico', {
+          empresaId: session.empresaId, unidadeId: session.unidadeId,
+          clienteId: oCli.value, veiculoId: oVeic.value || null,
+          diagnostico: oDiag.value || null, itens
+        });
+        modal.hide(); navigate('os');
+      } catch (e) { alert(e.message); }
+    };
+    modal.show();
+  };
+}
+
+window.concluirOs = async (id) => {
+  if (!confirm('Concluir esta OS?')) return;
+  try {
+    await Api.post(`/ordens-servico/${id}/concluir`, {});
+    navigate('os');
+  } catch (e) { alert(e.message); }
+};
 
 async function renderCaixa(el) {
   const [caixa, hist] = await Promise.all([
@@ -367,7 +477,7 @@ async function abrirNovaCarga() {
         ticket: +fTicket.value || 0
       });
       modal.hide();
-      if (criado?.id) window.open(`/api/atendimentos/${criado.id}/ticket`, '_blank');
+      if (criado?.id) await window.imprimirTicket(criado.id);
       navigate('atendimentos');
     } catch (e) { alert(e.message); }
   };
@@ -424,15 +534,23 @@ async function abrirEntradaPatio() {
         ticket: +eTicket.value || 0
       });
       modal.hide();
-      if (criado?.id) window.open(`/api/atendimentos/${criado.id}/ticket`, '_blank');
+      if (criado?.id) await window.imprimirTicket(criado.id);
       navigate('estacionamento');
     } catch (e) { alert(e.message); }
   };
   modal.show();
 }
 
-window.imprimirTicket = (id) => {
-  window.open(`/api/atendimentos/${id}/ticket`, '_blank');
+window.imprimirTicket = async (id) => {
+  try {
+    const res = await fetch('/api/atendimentos/' + id + '/ticket', {
+      headers: { Authorization: 'Bearer ' + (session?.token || '') }
+    });
+    if (!res.ok) throw new Error(await res.text() || 'Falha ao gerar ticket');
+    const html = await res.text();
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); }
+  } catch (e) { alert(e.message); }
 };
 
 window.finalizarAt = async (id) => {

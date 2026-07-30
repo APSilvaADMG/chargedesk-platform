@@ -1,6 +1,6 @@
 // Autor: Anderson Pereira Silva
 // Data: 30/07/2026
-// Descrição: Endpoints Fase 1 (paridade) + Fase 2 Estacionamento.
+// Descrição: Endpoints Platform — auth JWT, operação, importação e Agenda/OS.
 
 using ChargeDesk.BuildingBlocks.Domain;
 using ChargeDesk.BuildingBlocks.Time;
@@ -8,10 +8,13 @@ using ChargeDesk.Cadastros.Domain;
 using ChargeDesk.Core.Domain;
 using ChargeDesk.Financeiro.Application;
 using ChargeDesk.Financeiro.Domain;
+using ChargeDesk.Host.Api.Auth;
+using ChargeDesk.Infrastructure.Import;
 using ChargeDesk.Infrastructure.Persistence;
 using ChargeDesk.Infrastructure.Seed;
 using ChargeDesk.Operacao.Application;
 using ChargeDesk.Operacao.Domain;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChargeDesk.Host.Api;
@@ -20,7 +23,7 @@ public static class PlatformEndpoints
 {
     public static void MapPlatformApi(this WebApplication app)
     {
-        var api = app.MapGroup("/api");
+        var api = app.MapGroup("/api").RequireAuthorization(AuthPolicies.Autenticado);
 
         api.MapGet("/health", () => Results.Ok(new
         {
@@ -28,18 +31,20 @@ public static class PlatformEndpoints
             status = "ok",
             horarioOperacional = HorarioOperacional.Agora(),
             utc = DateTime.UtcNow
-        }));
+        })).AllowAnonymous();
 
         MapAuth(api);
         MapCadastros(api);
         MapEquipamentos(api);
         MapCaixa(api);
         MapAtendimentos(api);
+        MapAgendaOs(api);
+        MapImportacao(api);
     }
 
     private static void MapAuth(RouteGroupBuilder api)
     {
-        api.MapPost("/auth/login", async (LoginRequest req, PlatformDbContext db) =>
+        api.MapPost("/auth/login", async (LoginRequest req, PlatformDbContext db, JwtTokenService jwt) =>
         {
             var login = (req.Login ?? "").Trim().ToLowerInvariant();
             var user = await db.Usuarios.FirstOrDefaultAsync(u =>
@@ -49,8 +54,11 @@ public static class PlatformEndpoints
 
             user.UltimoAcesso = HorarioOperacional.Agora();
             await db.SaveChangesAsync();
+            var token = jwt.Emitir(user, out var expiraEm);
             return Results.Ok(new
             {
+                token,
+                expiresAt = expiraEm,
                 user.Id,
                 user.Nome,
                 user.Login,
@@ -58,6 +66,291 @@ public static class PlatformEndpoints
                 user.UnidadeId,
                 user.Admin
             });
+        }).AllowAnonymous();
+    }
+
+    private static void MapImportacao(RouteGroupBuilder api)
+    {
+        api.MapPost("/admin/importacao/sqlite", async (
+            [FromBody] ImportSqliteRequest req,
+            LegacySqliteImportService import) =>
+        {
+            try
+            {
+                var result = await import.ImportarAsync(req.CaminhoDb);
+                return Results.Ok(result);
+            }
+            catch (FileNotFoundException ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+        }).RequireAuthorization(AuthPolicies.Admin);
+    }
+
+    private static void MapAgendaOs(RouteGroupBuilder api)
+    {
+        api.MapGet("/agenda", async (PlatformDbContext db, Guid? empresaId, DateTime? de, DateTime? ate) =>
+        {
+            var eid = empresaId ?? DbSeed.EmpresaDemoId;
+            var inicio = de ?? HorarioOperacional.Agora().Date;
+            var fim = ate ?? inicio.AddDays(14);
+            var lista = await (
+                from a in db.AgendaReservas
+                join c in db.Clientes on a.ClienteId equals c.Id
+                join v in db.Veiculos on a.VeiculoId equals v.Id into vj
+                from v in vj.DefaultIfEmpty()
+                where a.EmpresaId == eid
+                    && a.Status == EntityStatus.Ativo
+                    && a.InicioPrevisto >= inicio
+                    && a.InicioPrevisto < fim
+                orderby a.InicioPrevisto
+                select new
+                {
+                    a.Id,
+                    a.ClienteId,
+                    ClienteNome = c.Nome,
+                    a.VeiculoId,
+                    Placa = v != null ? v.Placa : null,
+                    a.TipoServico,
+                    a.InicioPrevisto,
+                    a.FimPrevisto,
+                    a.StatusAgenda,
+                    a.AtendimentoId,
+                    a.Observacoes
+                }).ToListAsync();
+            return Results.Ok(lista);
+        });
+
+        api.MapPost("/agenda", async (AgendaCreateRequest req, PlatformDbContext db) =>
+        {
+            var eid = req.EmpresaId == Guid.Empty ? DbSeed.EmpresaDemoId : req.EmpresaId;
+            var uid = req.UnidadeId == Guid.Empty ? DbSeed.UnidadeDemoId : req.UnidadeId;
+            if (!await db.Clientes.AnyAsync(c => c.Id == req.ClienteId && c.EmpresaId == eid))
+                return Results.BadRequest("Cliente não encontrado.");
+            if (req.VeiculoId.HasValue && !await db.Veiculos.AnyAsync(v => v.Id == req.VeiculoId && v.EmpresaId == eid))
+                return Results.BadRequest("Veículo não encontrado.");
+
+            var reserva = new AgendaReserva
+            {
+                EmpresaId = eid,
+                UnidadeId = uid,
+                ClienteId = req.ClienteId,
+                VeiculoId = req.VeiculoId,
+                TipoServico = req.TipoServico,
+                InicioPrevisto = req.InicioPrevisto,
+                FimPrevisto = req.FimPrevisto,
+                StatusAgenda = AgendaStatus.Agendada,
+                Observacoes = req.Observacoes?.Trim(),
+                CriadoEm = HorarioOperacional.Agora()
+            };
+            db.AgendaReservas.Add(reserva);
+            await db.SaveChangesAsync();
+            return Results.Created($"/api/agenda/{reserva.Id}", new { reserva.Id, reserva.InicioPrevisto });
+        });
+
+        api.MapPost("/agenda/{id:guid}/checkin", async (Guid id, PlatformDbContext db) =>
+        {
+            var reserva = await db.AgendaReservas.FindAsync(id);
+            if (reserva is null) return Results.NotFound();
+            if (reserva.StatusAgenda is AgendaStatus.Cancelada or AgendaStatus.Concluida)
+                return Results.BadRequest("Reserva não pode ser convertida.");
+
+            var atendimento = new Atendimento
+            {
+                EmpresaId = reserva.EmpresaId,
+                UnidadeId = reserva.UnidadeId,
+                ClienteId = reserva.ClienteId,
+                VeiculoId = reserva.VeiculoId,
+                Tipo = reserva.TipoServico,
+                StatusAtendimento = AtendimentoStatus.EmExecucao,
+                Origem = AtendimentoOrigem.Agenda,
+                AbertoEm = HorarioOperacional.Agora(),
+                CriadoEm = HorarioOperacional.Agora()
+            };
+            db.Atendimentos.Add(atendimento);
+            reserva.AtendimentoId = atendimento.Id;
+            reserva.StatusAgenda = AgendaStatus.EmAtendimento;
+            reserva.AtualizadoEm = HorarioOperacional.Agora();
+            await db.SaveChangesAsync();
+            return Results.Ok(new { reserva.Id, atendimentoId = atendimento.Id });
+        });
+
+        api.MapGet("/ordens-servico", async (PlatformDbContext db, Guid? empresaId) =>
+        {
+            var eid = empresaId ?? DbSeed.EmpresaDemoId;
+            var lista = await (
+                from o in db.OrdensServico
+                join c in db.Clientes on o.ClienteId equals c.Id
+                join v in db.Veiculos on o.VeiculoId equals v.Id into vj
+                from v in vj.DefaultIfEmpty()
+                where o.EmpresaId == eid && o.Status == EntityStatus.Ativo
+                orderby o.Numero descending
+                select new
+                {
+                    o.Id,
+                    o.Numero,
+                    o.AtendimentoId,
+                    o.ClienteId,
+                    ClienteNome = c.Nome,
+                    o.VeiculoId,
+                    Placa = v != null ? v.Placa : null,
+                    o.StatusOs,
+                    o.Diagnostico,
+                    o.AbertaEm,
+                    o.EncerradaEm
+                }).Take(100).ToListAsync();
+            return Results.Ok(lista);
+        });
+
+        api.MapPost("/ordens-servico", async (OrdemServicoCreateRequest req, PlatformDbContext db) =>
+        {
+            var eid = req.EmpresaId == Guid.Empty ? DbSeed.EmpresaDemoId : req.EmpresaId;
+            var uid = req.UnidadeId == Guid.Empty ? DbSeed.UnidadeDemoId : req.UnidadeId;
+
+            Guid atendimentoId;
+            Guid clienteId;
+            Guid? veiculoId;
+
+            if (req.AtendimentoId.HasValue)
+            {
+                var at = await db.Atendimentos.FindAsync(req.AtendimentoId.Value);
+                if (at is null) return Results.BadRequest("Atendimento não encontrado.");
+                atendimentoId = at.Id;
+                clienteId = at.ClienteId;
+                veiculoId = at.VeiculoId;
+            }
+            else
+            {
+                if (req.ClienteId == Guid.Empty)
+                    return Results.BadRequest("Informe ClienteId ou AtendimentoId.");
+                clienteId = req.ClienteId;
+                veiculoId = req.VeiculoId;
+                var at = new Atendimento
+                {
+                    EmpresaId = eid,
+                    UnidadeId = uid,
+                    ClienteId = clienteId,
+                    VeiculoId = veiculoId,
+                    Tipo = AtendimentoTipo.Oficina,
+                    StatusAtendimento = AtendimentoStatus.EmExecucao,
+                    Origem = AtendimentoOrigem.Manual,
+                    AbertoEm = HorarioOperacional.Agora(),
+                    CriadoEm = HorarioOperacional.Agora(),
+                    Observacoes = req.Diagnostico
+                };
+                db.Atendimentos.Add(at);
+                atendimentoId = at.Id;
+            }
+
+            var numero = (await db.OrdensServico.CountAsync(o => o.EmpresaId == eid)) + 1;
+            var os = new OrdemServico
+            {
+                EmpresaId = eid,
+                UnidadeId = uid,
+                AtendimentoId = atendimentoId,
+                ClienteId = clienteId,
+                VeiculoId = veiculoId,
+                Numero = numero,
+                StatusOs = OrdemServicoStatus.Aberta,
+                Diagnostico = req.Diagnostico?.Trim(),
+                Observacoes = req.Observacoes?.Trim(),
+                AbertaEm = HorarioOperacional.Agora(),
+                CriadoEm = HorarioOperacional.Agora()
+            };
+            db.OrdensServico.Add(os);
+
+            foreach (var item in req.Itens ?? [])
+            {
+                if (string.IsNullOrWhiteSpace(item.Descricao)) continue;
+                db.OrdemServicoItens.Add(new OrdemServicoItem
+                {
+                    OrdemServicoId = os.Id,
+                    Descricao = item.Descricao.Trim(),
+                    Tipo = item.Tipo,
+                    Quantidade = item.Quantidade <= 0 ? 1 : item.Quantidade,
+                    ValorUnitario = item.ValorUnitario,
+                    Concluido = false
+                });
+            }
+
+            await db.SaveChangesAsync();
+            return Results.Created($"/api/ordens-servico/{os.Id}", new { os.Id, os.Numero, os.AtendimentoId });
+        });
+
+        api.MapGet("/ordens-servico/{id:guid}", async (Guid id, PlatformDbContext db) =>
+        {
+            var os = await db.OrdensServico.FindAsync(id);
+            if (os is null) return Results.NotFound();
+            var itens = await db.OrdemServicoItens.Where(i => i.OrdemServicoId == id).ToListAsync();
+            var cliente = await db.Clientes.FindAsync(os.ClienteId);
+            var veiculo = os.VeiculoId.HasValue ? await db.Veiculos.FindAsync(os.VeiculoId.Value) : null;
+            return Results.Ok(new
+            {
+                os.Id,
+                os.Numero,
+                os.AtendimentoId,
+                os.StatusOs,
+                os.Diagnostico,
+                os.Observacoes,
+                os.AbertaEm,
+                os.EncerradaEm,
+                ClienteNome = cliente?.Nome,
+                Placa = veiculo?.Placa,
+                Itens = itens.Select(i => new
+                {
+                    i.Id, i.Descricao, i.Tipo, i.Quantidade, i.ValorUnitario, i.Concluido
+                })
+            });
+        });
+
+        api.MapPost("/ordens-servico/{id:guid}/itens", async (Guid id, OsItemRequest req, PlatformDbContext db) =>
+        {
+            var os = await db.OrdensServico.FindAsync(id);
+            if (os is null) return Results.NotFound();
+            if (string.IsNullOrWhiteSpace(req.Descricao))
+                return Results.BadRequest("Informe a descrição do item.");
+            var item = new OrdemServicoItem
+            {
+                OrdemServicoId = id,
+                Descricao = req.Descricao.Trim(),
+                Tipo = req.Tipo,
+                Quantidade = req.Quantidade <= 0 ? 1 : req.Quantidade,
+                ValorUnitario = req.ValorUnitario
+            };
+            db.OrdemServicoItens.Add(item);
+            await db.SaveChangesAsync();
+            return Results.Ok(new { item.Id, item.Descricao });
+        });
+
+        api.MapPost("/ordens-servico/{id:guid}/concluir", async (Guid id, PlatformDbContext db) =>
+        {
+            var os = await db.OrdensServico.FindAsync(id);
+            if (os is null) return Results.NotFound();
+            os.StatusOs = OrdemServicoStatus.Concluida;
+            os.EncerradaEm = HorarioOperacional.Agora();
+            os.AtualizadoEm = HorarioOperacional.Agora();
+
+            var at = await db.Atendimentos.FindAsync(os.AtendimentoId);
+            if (at is not null && at.StatusAtendimento == AtendimentoStatus.EmExecucao)
+            {
+                at.StatusAtendimento = AtendimentoStatus.AguardandoPagamento;
+                at.EncerradoEm = os.EncerradaEm;
+                at.AtualizadoEm = os.AtualizadoEm;
+            }
+
+            var reserva = await db.AgendaReservas.FirstOrDefaultAsync(a => a.AtendimentoId == os.AtendimentoId);
+            if (reserva is not null)
+            {
+                reserva.StatusAgenda = AgendaStatus.Concluida;
+                reserva.AtualizadoEm = os.AtualizadoEm;
+            }
+
+            await db.SaveChangesAsync();
+            return Results.Ok(new { os.Id, os.StatusOs });
         });
     }
 
@@ -771,3 +1064,11 @@ public record AtendimentoEstacionamentoCreateRequest(
     int Ticket, DateTime? HoraInicial, string? Observacoes);
 public record FinalizarRequest(DateTime? HoraFinal);
 public record PagarRequest(FormaPagamento Forma, string? MotivoCortesia = null);
+public record ImportSqliteRequest(string CaminhoDb);
+public record AgendaCreateRequest(
+    Guid EmpresaId, Guid UnidadeId, Guid ClienteId, Guid? VeiculoId,
+    AtendimentoTipo TipoServico, DateTime InicioPrevisto, DateTime? FimPrevisto, string? Observacoes);
+public record OrdemServicoCreateRequest(
+    Guid EmpresaId, Guid UnidadeId, Guid? AtendimentoId, Guid ClienteId, Guid? VeiculoId,
+    string? Diagnostico, string? Observacoes, List<OsItemRequest>? Itens);
+public record OsItemRequest(string Descricao, OrdemServicoItemTipo Tipo, decimal Quantidade, decimal ValorUnitario);
